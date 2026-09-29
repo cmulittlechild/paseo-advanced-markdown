@@ -1,6 +1,6 @@
 {
   "name": "paseo-advanced-markdown",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "private": true,
   "description": "Advanced Markdown rendering for Paseo 0.8–0.10: math formulas and Mermaid diagrams in assistant messages",
   "type": "module",
