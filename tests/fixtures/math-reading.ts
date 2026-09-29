@@ -250,8 +250,8 @@ export const MATH_READING_CORPUS: readonly MathReadingFixture[] = [
     id: "host-file-link",
     source: "Formula $x$ [file](src/main.ts)",
     formulas: [{ source: "$x$", tex: "x" }],
-    expectation: "host-gap",
-    note: "Entire source item stays with host to preserve file navigation.",
+    expectation: "render",
+    note: "Formula renders beside a local link; clicking the link opens a read-only source preview.",
   },
   {
     id: "entity-source",
