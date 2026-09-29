@@ -15,6 +15,7 @@ import {
   MAX_MATH_EXPRESSION,
   MAX_MERMAID_SOURCE,
 } from "../limits.js";
+import { isSupportedLink } from "./links.js";
 
 /** Token types the extensions add. Renderers match on these names. */
 export const MATH_INLINE = "math_inline";
@@ -434,7 +435,7 @@ export function markdownExtensions(md: MarkdownParser): void {
 export interface DetectedExtensions {
   math: boolean;
   mermaid: boolean;
-  /** Nodes the plugin renderer does not cover (inline images). The host keeps such items. */
+  /** Nodes the plugin renderer does not cover (images and unsupported links). */
   unsupported: boolean;
 }
 
@@ -462,10 +463,7 @@ export function detectExtensions(source: string): DetectedExtensions {
     if (token.type === MATH_INLINE || token.type === MATH_BLOCK) math = true;
     else if (token.type === MERMAID_BLOCK) mermaid = true;
     else if (token.type === "image") unsupported = true;
-    else if (
-      token.type === "link_open" &&
-      !/^(?:https?:\/\/|mailto:)/i.test(String(token.attrGet("href") ?? ""))
-    )
+    else if (token.type === "link_open" && !isSupportedLink(String(token.attrGet("href") ?? "")))
       unsupported = true;
     if (token.children) for (const child of token.children) pending.push(child);
   }

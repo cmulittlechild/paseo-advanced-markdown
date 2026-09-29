@@ -9,10 +9,15 @@ patch: the official app, daemon, and plugin SDK are the only dependencies.
 - Mermaid: ```` ```mermaid ```` fences rendered on the host with the pinned
   Mermaid CLI and a plugin-managed Chrome headless shell.
 - Both in one message, mixed with ordinary Markdown (headings, emphasis,
-  lists, quotes, tables, code, HTTP(S) links).
+  lists, quotes, tables, code, HTTP(S) links, and local source-file links).
 - Chinese bold text and boxed equation borders are preserved.
 - Copy TeX and original source, formula/diagram inspection, light and dark themes,
   and per-host size/module settings.
+
+**Unreleased (`main`)** fixes formulas falling back to raw LaTeX when a local
+file link appears in the same message. Local links open a read-only source
+preview with line numbers. This fix is available on `main`; the latest tagged
+release remains v0.2.4.
 
 **v0.2.4** extends the supported Paseo range to `>=0.8.0 <0.11.0` and adds
 Paseo 0.10.1 to the compiler/SDK compatibility checks. See the
@@ -134,12 +139,20 @@ chat history, Drafts, or other plugins.
 | Prices (`$5 and $10`), `\$`, inline code, other fences | plain text / code |
 | Footnote markers and definitions (`[^note]`, `[^note]: …`) | readable text; formulas in definition lines render, without footnote navigation |
 | Invalid TeX, invalid Mermaid, oversized input | source with a short reason; other content still renders |
-| Messages with inline images or links requiring host file navigation | left to Paseo's renderer |
+| Local source-file links beside formulas or diagrams | clickable read-only source preview on the selected host; supports relative paths, absolute paths, `file://` URLs, `:line` and `#Lline` anchors |
+| Messages with inline images or unsupported link schemes | left to Paseo's renderer |
 | User messages, tool output, other timeline rows | unchanged |
 
 Bare `$$` display math that contains a blank line is split by Paseo while
 streaming; each half stays readable source. Use a ```` ```math ```` fence for
 multi-paragraph display math.
+
+Local file links open a plugin preview because Paseo's public timeline SDK does
+not expose file-tab navigation. Files are read only after a click, relative to
+the conversation's working directory on its host. The preview shows up to 200
+lines / 32 KiB around the requested line and can copy the path or displayed source.
+Only UTF-8 regular files up to 1 MiB are supported; missing, binary, or larger
+files show an error. HTTP(S) and mail links keep their usual behavior.
 
 Copy scopes: copying happens inside the viewer. In **Preview**, **Copy LaTeX** or
 **Copy Mermaid** copies the original expression or diagram body. In **Source**,

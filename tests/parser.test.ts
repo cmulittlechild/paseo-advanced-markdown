@@ -435,7 +435,40 @@ describe("context-limited text percent repair", () => {
   });
 });
 
-describe("host-owned file navigation", () => {
+describe("file links beside formulas", () => {
+  it("keeps a multiline equation intact beside an absolute source link", () => {
+    const source = String.raw`$$
+m_T
+=
+\left\lfloor \left(\frac{T}{\log T}\right)^{1/2} \right\rfloor
+$$
+[对应源码](/Users/example/project/main.py:120)`;
+    expect(shouldTakeOver(detectExtensions(source), { math: true, mermaid: true })).toBe(true);
+    expect(formulas(source)).toHaveLength(1);
+    expect(parse(source).some((token) => token.type === "heading_open")).toBe(false);
+  });
+
+  it("still leaves unsupported schemes and inline images to the host", () => {
+    for (const href of [
+      "javascript:alert(1)",
+      "data:text/plain,hello",
+      "vscode://file/tmp/a",
+      "#section",
+    ]) {
+      expect(
+        shouldTakeOver(detectExtensions(`Formula $x$ [source](${href})`), {
+          math: true,
+          mermaid: true,
+        }),
+      ).toBe(false);
+    }
+    expect(
+      shouldTakeOver(detectExtensions("Formula $x$ ![plot](src/plot.png)"), {
+        math: true,
+        mermaid: true,
+      }),
+    ).toBe(false);
+  });
   it("keeps footnotes readable without treating their prose as a file destination", () => {
     const source = [
       "Formula $E=mc^2$ with a note[^render-note].",
@@ -454,18 +487,21 @@ describe("host-owned file navigation", () => {
     expect(parse(source).filter((token) => token.type === "link_open")).toHaveLength(0);
   });
 
-  it("declines relative and file links beside extensions but preserves supported web links", () => {
+  it("renders formulas beside relative, absolute, and file links", () => {
     for (const link of [
       "src/main.ts",
       "../README.md",
       "/tmp/foo.ts",
       "file:///tmp/foo.ts",
       "C:/project/main.ts",
+      "/Users/example/project/main.py:120",
+      "src/main.ts#L10-L20",
+      "file:///tmp/foo%20bar.ts#L2",
     ]) {
       expect(
         shouldTakeOver(detectExtensions(`$x$ [source](${link})`), { math: true, mermaid: true }),
         link,
-      ).toBe(false);
+      ).toBe(true);
     }
     for (const link of ["https://example.org/a", "http://example.org", "mailto:a@example.org"]) {
       expect(
@@ -478,7 +514,7 @@ describe("host-owned file navigation", () => {
     ).toBe(true);
   });
 
-  it("keeps reference links immediately after footnotes owned by the host", () => {
+  it("renders reference links immediately after footnotes alongside formulas", () => {
     for (const prefix of ["", "> ", "  "]) {
       const source = [
         prefix === "  " ? "- Formula $x$ [source]." : `${prefix}Formula $x$ [source].`,
@@ -489,9 +525,9 @@ describe("host-owned file navigation", () => {
       expect(detectExtensions(source), source).toEqual({
         math: true,
         mermaid: false,
-        unsupported: true,
+        unsupported: false,
       });
-      expect(shouldTakeOver(detectExtensions(source), { math: true, mermaid: true })).toBe(false);
+      expect(shouldTakeOver(detectExtensions(source), { math: true, mermaid: true })).toBe(true);
       expect(
         parse(source)
           .filter((token) => token.type === "link_open")

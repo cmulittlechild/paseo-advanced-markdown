@@ -11,9 +11,12 @@ import {
 } from "./server/mermaid/render.js";
 import { resolveMermaidRuntime } from "./server/mermaid/runtime.js";
 import { MERMAID_CLI_VERSION, PLUGIN_VERSION } from "./server/generated/runtime.js";
+import { previewFile } from "./shared/file-preview.js";
+import { readFilePreview } from "./server/files/preview.js";
 
 export default function contribute(server: PluginServerContext) {
   server.registerSettings(moduleSettings);
+  server.handle(previewFile, readFilePreview);
   server.handle(renderMath, (input) => renderFormula(input));
   server.handle(renderMermaid, (input) => renderDiagram(input));
   server.handle(runtimeStatus, async () => {

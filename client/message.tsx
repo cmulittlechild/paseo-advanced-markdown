@@ -8,6 +8,7 @@ import { useToast } from "@getpaseo/plugin/client/react-native";
 import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Text, View, type TextStyle } from "react-native";
 import type { MessageData } from "../shared/message.js";
+import { isExternalLink, isSupportedLink, parseFileLink } from "../shared/markdown/links.js";
 import { fontScaleToBaseSize, moduleSettings, type ModuleSettings } from "../shared/settings.js";
 import Markdown, {
   MarkdownIt,
@@ -27,16 +28,23 @@ import { ContentViewerProvider } from "./content-viewer.js";
 import { moduleState } from "./module-state.js";
 import { colorHex, mermaidThemeFor } from "./theme.js";
 import { viewerIdentity } from "./viewer-identity.js";
+import { FilePreview } from "./file-preview.js";
 
 const markdown = new MarkdownIt({
   html: false,
   typographer: false,
   linkify: true,
 }).use(markdownExtensions);
+markdown.validateLink = isSupportedLink;
 
 // The dependency's runtime retains token.meta, but its public ASTNode type
 // omits sourceMeta. Narrow that field instead of serializing TeX into markup.
 type ExtensionNode = ASTNode & { sourceMeta?: unknown; info?: string };
+interface FileSelection {
+  href: string;
+  hostId: string;
+  agentId: string;
+}
 
 function metaString(meta: unknown, field: string): string | undefined {
   if (meta && typeof meta === "object" && field in meta) {
@@ -70,6 +78,7 @@ export function MessageView(props: PluginTimelineItemProps<MessageData>) {
 
 const MemoizedMessage = memo(
   function MessageBody({
+    agentId,
     item,
     host,
     theme,
@@ -80,6 +89,9 @@ const MemoizedMessage = memo(
     const colors = theme.colors;
     const toast = useToast();
     const [width, setWidth] = useState(0);
+    const [fileSelection, setFileSelection] = useState<FileSelection | null>(null);
+    const selectedFile =
+      fileSelection?.hostId === host.id && fileSelection.agentId === agentId ? fileSelection : null;
     const fontSize = fontScaleToBaseSize(modules.fontScale, layout.compact);
     const mermaidTheme = mermaidThemeFor(theme);
     const styles = useMemo(
@@ -239,15 +251,18 @@ const MemoizedMessage = memo(
     const onLinkPress = useCallback(
       (url: string) => {
         // Opening happens only after a user's press, never while parsing/rendering.
-        // Refuse custom app/file/script schemes even if a future parser allows them.
-        if (!/^(?:https?:\/\/|mailto:)/i.test(url)) {
+        if (parseFileLink(url)) {
+          setFileSelection({ href: url, hostId: host.id, agentId });
+          return false;
+        }
+        if (!isExternalLink(url)) {
           toast.error("This link type is not supported.");
           return false;
         }
         void Linking.openURL(url).catch(() => toast.error("Unable to open this link."));
         return false;
       },
-      [toast],
+      [toast, host.id, agentId],
     );
 
     return (
@@ -265,6 +280,17 @@ const MemoizedMessage = memo(
             {text}
           </Markdown>
         </ContentViewerProvider>
+        {selectedFile !== null && (
+          <FilePreview
+            key={`${host.id}:${agentId}:${selectedFile.href}`}
+            href={selectedFile.href}
+            agentId={agentId}
+            hostId={host.id}
+            theme={theme}
+            compact={layout.compact}
+            onClose={() => setFileSelection(null)}
+          />
+        )}
       </View>
     );
   },
@@ -273,6 +299,7 @@ const MemoizedMessage = memo(
     const b = next.theme.colors;
     return (
       previous.item.data.text === next.item.data.text &&
+      previous.agentId === next.agentId &&
       previous.host.id === next.host.id &&
       previous.layout.compact === next.layout.compact &&
       previous.modules.math === next.modules.math &&

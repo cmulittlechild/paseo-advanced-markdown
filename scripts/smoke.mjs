@@ -168,6 +168,7 @@ const samples = {
   ].join("\n"),
   plain: "An ordinary completed answer with `code` and a [link](https://example.org).",
   image: "Formula $x$ and ![figure](https://example.org/a.png)",
+  fileLink: "Formula $x^2$ [source](/tmp/source.ts:12) and [relative](src/main.ts#L2).",
   blankLineDisplay: "$$\na^2\n\n+b^2=c^2\n$$",
 };
 
@@ -418,6 +419,21 @@ async function exerciseClientBundle(bundle, id) {
         "earlier plugin wins the Mermaid item",
       );
       outcomes.firstTransformerWins = true;
+    }
+
+    // File links must not evict the formula renderer as streamed links close.
+    {
+      const { rows } = stream(
+        samples.fileLink,
+        (projected, assembled) => {
+          assert.equal(sourceOf(projected[0]), assembled);
+          if (assembled.includes("$x^2$")) assert.equal(projected[0].kind, "plugin");
+        },
+        1,
+      );
+      assert.equal(rows.length, 1);
+      assert.equal(rows[0].kind, "plugin");
+      outcomes.fileLinks = "inline formula and local links survive one-character streaming";
     }
 
     // 9. Settings snapshot: disabling both modules returns new items to the host.
