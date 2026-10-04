@@ -15,11 +15,16 @@ describe.each(["app", "daemon"] as const)("Paseo %s compatibility", (runtime) =>
     "0.10.0",
     "0.10.1",
     "0.10.99",
+    "0.11.0-beta.1",
+    "0.11.0-beta.3",
+    "0.11.0",
+    "0.11.1",
+    "0.11.99",
   ])("accepts %s using the official version gate", (version) => {
     expect(() => assertPluginCompatibility({ ...manifest, runtime, version })).not.toThrow();
   });
 
-  it.each(["0.7.9", "0.11.0-beta.1", "0.11.0", "0.11.1", "1.0.0", "invalid"])(
+  it.each(["0.7.9", "0.12.0-beta.1", "0.12.0", "0.12.1", "1.0.0", "invalid"])(
     "rejects unsupported or unknown version %s",
     (version) => {
       expect(() => assertPluginCompatibility({ ...manifest, runtime, version })).toThrow();

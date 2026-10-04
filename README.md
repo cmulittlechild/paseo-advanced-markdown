@@ -1,7 +1,7 @@
 # Advanced Markdown for Paseo
 
 Renders math formulas and Mermaid diagrams inside assistant messages in
-[Paseo](https://paseo.sh) 0.8.x, 0.9.x, and 0.10.x, as an installable plugin. No Paseo fork, no
+[Paseo](https://paseo.sh) 0.8.x, 0.9.x, 0.10.x, and 0.11.x, as an installable plugin. No Paseo fork, no
 patch: the official app, daemon, and plugin SDK are the only dependencies.
 
 - Math: `$…$`, `\(…\)`, `$$…$$`, `\[…\]`, and ```` ```math ```` fences,
@@ -14,7 +14,12 @@ patch: the official app, daemon, and plugin SDK are the only dependencies.
 - Copy TeX and original source, formula/diagram inspection, light and dark themes,
   and per-host size/module settings.
 
-**v0.2.5** fixes formulas falling back to raw LaTeX when a local
+**v0.2.6** extends compatibility to Paseo 0.11.x (`>=0.8.0 <0.12.0`).
+Validated against the official 0.11.0-beta.3 compiler, SDK, daemon, and web client;
+the stable 0.11.0 package was not yet published at validation time. See the
+[release notes](docs/release/0.2.6.md).
+
+v0.2.5 fixes formulas falling back to raw LaTeX when a local
 file link appears in the same message. Local links open a read-only source
 preview with line numbers. See the [release notes](docs/release/0.2.5.md).
 
@@ -59,7 +64,7 @@ Mermaid diagrams rendered alongside prose and tables:
 
 | Side | Requirement |
 | --- | --- |
-| Paseo | app and daemon **>=0.8.0 <0.11.0**; compiler/SDK checks cover 0.8.0, 0.9.0-beta.2, and 0.10.1 (see the [release notes](docs/release/0.2.4.md)) |
+| Paseo | app and daemon **>=0.8.0 <0.12.0**; compiler/SDK checks cover 0.8.0, 0.9.0-beta.2, 0.10.1, and 0.11.0-beta.3 (see the [release notes](docs/release/0.2.6.md)) |
 | Daemon host | Node ≥ 22.22 and npm on `PATH` for the preparation step, Git, about 700 MiB of disk in the plugin cache, network access during installation only |
 | Text font | A font covering any non-Latin characters used inside formulas (Chinese, Japanese, Korean, …). macOS and most desktop Linux installs already have one; see [Text inside formulas](#text-inside-formulas) |
 | Daemon host OS | verified on macOS arm64; Linux needs a CJK font (`fonts-noto-cjk`), `ps` (`procps`), the usual Chrome shared libraries, and either unprivileged user namespaces or `PASEO_ADVANCED_MARKDOWN_NO_SANDBOX=1` in the daemon's environment (Ubuntu 24.04 restricts them by default); Windows is untested |
@@ -68,18 +73,18 @@ Mermaid diagrams rendered alongside prose and tables:
 Plugins must be enabled on the daemon (Settings → Plugins, or `pluginsEnabled`
 in `config.json`).
 
-Paseo also checks prereleases against their stable core, so `0.10.0-beta.1`
-meets this range, while `0.11.0-beta.1` does not. This is a bounded compatibility
-policy, not a claim that every 0.8/0.9/0.10 build has received device QA.
-Versions before v0.2.4 do not accept Paseo 0.10; tags through v0.1.4 require
-exactly Paseo 0.8.0. Install v0.2.5 for the current release.
+Paseo also checks prereleases against their stable core, so `0.11.0-beta.3`
+meets this range, while `0.12.0-beta.1` does not. This is a bounded compatibility
+policy, not a claim that every 0.8/0.9/0.10/0.11 build has received device QA.
+Versions before v0.2.6 do not accept Paseo 0.11; versions before v0.2.4 exclude 0.10; tags through v0.1.4 require
+exactly Paseo 0.8.0. Install v0.2.6 for the current release.
 
 ## Install
 
 From Git, pinned to a tag (recommended):
 
 ```bash
-paseo plugin add custyhs/paseo-advanced-markdown --ref v0.2.5
+paseo plugin add custyhs/paseo-advanced-markdown --ref v0.2.6
 paseo plugin ls
 ```
 
@@ -116,13 +121,13 @@ A fixed tag does not advance to the next release. If `paseo plugin update --help
 lists `--ref`, switch an existing Git installation without removing its settings:
 
 ```bash
-paseo plugin update advanced-markdown --ref v0.2.5
+paseo plugin update advanced-markdown --ref v0.2.6
 ```
 
 Older CLIs require removing and adding the plugin with the new tag; record your
-plugin settings before removal, because removal deletes them. Use `v0.2.4` to
-roll back on Paseo 0.8/0.9/0.10; that version does not include the local-file-link
-rendering fix. Older versions have narrower host requirements: v0.2.3 excludes
+plugin settings before removal, because removal deletes them. Use `v0.2.5` to
+roll back on Paseo 0.8/0.9/0.10; it cannot load on Paseo 0.11. There is no earlier
+plugin release supporting 0.11. Older versions have narrower host requirements: v0.2.3 excludes
 Paseo 0.10, and tags through v0.1.4 require exactly Paseo 0.8.0.
 
 A failed preparation during `plugin update` keeps the installed version running. Updates never touch
@@ -290,7 +295,7 @@ HERMES_BIN=… npm run smoke:hermes
 To check a newer compiler/SDK without changing the 0.8 development lockfile:
 
 ```bash
-npm install --prefix .compat-runtime --no-save --package-lock=false @getpaseo/server@0.10.1 @getpaseo/plugin@0.10.1
+npm install --prefix .compat-runtime --no-save --package-lock=false @getpaseo/server@0.11.0-beta.3 @getpaseo/plugin@0.11.0-beta.3
 PASEO_COMPAT_RUNTIME=.compat-runtime npm run smoke
 ```
 
