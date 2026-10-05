@@ -232,6 +232,8 @@ const MemoizedMessage = memo(
             table={node}
             fontSize={fontSize}
             frameStyle={ruleStyles._VIEW_SAFE_table ?? ruleStyles.table}
+            theme={theme}
+            compact={layout.compact}
           >
             {children}
           </MarkdownTable>
