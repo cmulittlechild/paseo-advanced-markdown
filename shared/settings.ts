@@ -14,8 +14,10 @@ export const moduleSettings = defineSettings({
   schema: z.object({
     math: z.boolean().default(true),
     mermaid: z.boolean().default(true),
-    codeBlocks: z.boolean().default(false),
-    tables: z.boolean().default(false),
+    // This fork defaults the code/table takeover on: the point of the branch is
+    // the narrow-screen fix, and the switches are still per-host opt-outs.
+    codeBlocks: z.boolean().default(true),
+    tables: z.boolean().default(true),
     fontScale: z.enum(FONT_SCALES).default("default"),
     mathScale: z.literal(MATH_SCALES).default(1),
   }),

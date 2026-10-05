@@ -22,15 +22,15 @@ describe("formula-size settings", () => {
       {
         math: false,
         mermaid: true,
-        codeBlocks: false,
-        tables: false,
+        codeBlocks: true,
+        tables: true,
         fontScale: "large",
         mathScale: 1,
       },
     );
     expect(DEFAULT_MODULE_SETTINGS.mathScale).toBe(1);
-    expect(DEFAULT_MODULE_SETTINGS.codeBlocks).toBe(false);
-    expect(DEFAULT_MODULE_SETTINGS.tables).toBe(false);
+    expect(DEFAULT_MODULE_SETTINGS.codeBlocks).toBe(true);
+    expect(DEFAULT_MODULE_SETTINGS.tables).toBe(true);
   });
 
   it.each(MATH_SCALES)("round-trips the %s formula-size preset independently", (mathScale) => {

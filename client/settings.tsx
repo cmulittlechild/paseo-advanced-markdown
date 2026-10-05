@@ -138,10 +138,10 @@ export function SettingsScreen({ theme, host }: PluginSurfaceProps) {
           )}
         </SettingsCard>
         <Text style={muted}>
-          These switches apply to this host only. Code blocks and tables are off by default so the
-          plugin takes over the same messages as before; turn them on to fix wrapped folder trees
-          and squeezed tables on narrow screens. Each client fits content to its own available
-          space.
+          These switches apply to this host only. Code blocks and tables are on by default in this
+          build so folder trees keep their alignment and wide tables stay readable on narrow
+          screens; turn them off to leave those rows to Paseo. Each client fits content to its own
+          available space.
         </Text>
       </SettingsSection>
       <SettingsSection title="Runtime on this host">

@@ -62,11 +62,11 @@ Settings → Plugins → Advanced Markdown, per host:
   source. A message whose enabled content is exhausted returns to Paseo's own
   renderer the next time it is displayed; rows already on screen update after a
   reload or when the conversation is reopened.
-- Code blocks on/off (off by default). When on, fenced and indented code blocks
+- Code blocks on/off (on by default). When on, fenced and indented code blocks
   render with a horizontal scroll instead of wrapping long lines and breaking
   indentation. Messages that also contain math, diagrams, or tables are shown by
   the plugin regardless.
-- Tables on/off (off by default). When on, Markdown tables keep readable column
+- Tables on/off (on by default). When on, Markdown tables keep readable column
   widths and scroll horizontally inside the message instead of squeezing every
   column to a fraction of the message width.
 - Text size inside plugin rows.
@@ -77,16 +77,18 @@ Settings → Plugins → Advanced Markdown, per host:
 These switches do not change Paseo's built-in Mermaid rendering for rows the
 plugin does not own.
 
-Code blocks and tables are off by default so an update does not change which rows
-the plugin owns; turn them on to fix wrapped folder trees and squeezed tables on
-narrow screens. Copying a code block still copies its source, without the fence.
-Tables render with **Copy table** (GFM) and **Copy as TSV** actions so the data
-pastes into a chat or a spreadsheet.
+Code blocks and tables are on by default in this build so folder trees keep their
+alignment and wide tables stay readable on narrow screens; turn them off per host
+to leave those rows to Paseo. Copying a code block still copies its source,
+without the fence. Tables render with **Copy table** (GFM) and **Copy as TSV**
+actions so the data pastes into a chat or a spreadsheet.
 
 ## What is rendered, and what is not
 
 | Content | Behavior |
 | --- | --- |
+| Ordinary fenced or indented code (Code blocks on) | horizontally scrollable, copyable source |
+| GFM table (Tables on) | readable column widths that scroll sideways; Copy table / Copy as TSV actions |
 | Complete inline or display math, closed `math` fence | image; click or tap to inspect and copy |
 | A `math` fence whose body is itself wrapped in `\[…\]`, `$$…$$`, `\(…\)`, or `$…$` | the redundant wrapper is ignored, the formula renders |
 | Complete `mermaid` fence: flowchart, sequence, class, state, ER, Gantt (verified); other types on a best-effort basis | image; click or tap to inspect and copy |
