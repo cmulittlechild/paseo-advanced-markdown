@@ -5,10 +5,13 @@
 // line before wrapping; a table whose columns cannot fit at that width scrolls
 // horizontally inside the message instead of squeezing every column to width/N.
 // Estimates run slightly wide so semibold headers do not break mid-word.
-import { ScrollView } from "@getpaseo/plugin/client/react-native";
-import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
+import { ScrollView, copyText, useToast } from "@getpaseo/plugin/client/react-native";
+import type { PluginTheme } from "@getpaseo/plugin";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { View, type LayoutChangeEvent, type ViewStyle } from "react-native";
+import { tableToMarkdown, tableToTsv } from "../shared/markdown/table.js";
 import type { ASTNode } from "./generated/markdown.js";
+import { ActionBar } from "./action-bar.js";
 
 const CHARACTER_WIDTH_EM = 0.62;
 const MIN_COLUMN_EM = 4;
@@ -66,14 +69,30 @@ export function MarkdownTable({
   table,
   fontSize,
   frameStyle,
+  theme,
+  compact,
   children,
 }: {
   table: ASTNode;
   fontSize: number;
   frameStyle: ViewStyle;
+  theme: PluginTheme;
+  compact: boolean;
   children: ReactNode;
 }) {
   const columns = useMemo(() => tableColumns(table, fontSize), [table, fontSize]);
+  const toast = useToast();
+  const copy = useCallback(
+    async (text: string, label: string) => {
+      try {
+        await copyText(text);
+        toast.show(`${label} copied`, { variant: "success" });
+      } catch {
+        toast.error(`Unable to copy ${label}.`);
+      }
+    },
+    [toast],
+  );
   // Sized explicitly so the content is not laid out from unwrapped text width.
   const contentStyle = useMemo(
     () => ({
@@ -86,29 +105,49 @@ export function MarkdownTable({
   const [contentWidth, setContentWidth] = useState(0);
   const overflows = frameWidth > 0 && contentWidth > frameWidth + OVERFLOW_EPSILON;
   return (
-    <ScrollView
-      // Android only shows a persistent scrollbar that was on when the view was
-      // created; turning it on later leaves the bar hidden until the first
-      // scroll. Remount once overflow is known.
-      key={overflows ? "overflows" : "fits"}
-      horizontal
-      nestedScrollEnabled
-      showsHorizontalScrollIndicator
-      persistentScrollbar={overflows}
-      onLayout={(event: LayoutChangeEvent) => {
-        const width = event.nativeEvent.layout.width;
-        if (width > 0) setFrameWidth(width);
-      }}
-      onContentSizeChange={(width: number) => {
-        if (width > 0) setContentWidth(width);
-      }}
-      style={frameStyle}
-      contentContainerStyle={contentStyle}
-    >
-      <View style={{ flex: 1 }}>
-        <TableColumnsContext.Provider value={columns}>{children}</TableColumnsContext.Provider>
-      </View>
-    </ScrollView>
+    <View style={{ alignSelf: "stretch" }}>
+      <ScrollView
+        // Android only shows a persistent scrollbar that was on when the view was
+        // created; turning it on later leaves the bar hidden until the first
+        // scroll. Remount once overflow is known.
+        key={overflows ? "overflows" : "fits"}
+        horizontal
+        nestedScrollEnabled
+        showsHorizontalScrollIndicator
+        persistentScrollbar={overflows}
+        onLayout={(event: LayoutChangeEvent) => {
+          const width = event.nativeEvent.layout.width;
+          if (width > 0) setFrameWidth(width);
+        }}
+        onContentSizeChange={(width: number) => {
+          if (width > 0) setContentWidth(width);
+        }}
+        style={frameStyle}
+        contentContainerStyle={contentStyle}
+      >
+        <View style={{ flex: 1 }}>
+          <TableColumnsContext.Provider value={columns}>{children}</TableColumnsContext.Provider>
+        </View>
+      </ScrollView>
+      <ActionBar
+        theme={theme}
+        compact={compact}
+        actions={[
+          {
+            key: "copy-markdown",
+            icon: "Copy",
+            label: "Copy table",
+            onPress: () => void copy(tableToMarkdown(table), "Table"),
+          },
+          {
+            key: "copy-tsv",
+            icon: "Copy",
+            label: "Copy as TSV",
+            onPress: () => void copy(tableToTsv(table), "Table (TSV)"),
+          },
+        ]}
+      />
+    </View>
   );
 }
 
