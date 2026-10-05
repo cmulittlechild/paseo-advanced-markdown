@@ -1,364 +1,74 @@
 # Advanced Markdown for Paseo
 
-Renders math formulas and Mermaid diagrams inside assistant messages in
-[Paseo](https://paseo.sh) 0.8.x, 0.9.x, 0.10.x, and 0.11.x, as an installable plugin. No Paseo fork, no
-patch: the official app, daemon, and plugin SDK are the only dependencies.
+Math formulas and Mermaid diagrams, rendered directly in your
+[Paseo](https://paseo.sh) assistant messages.
 
-- Math: `$…$`, `\(…\)`, `$$…$$`, `\[…\]`, and ```` ```math ```` fences,
-  typeset on the host with MathJax and rasterized with resvg.
-- Mermaid: ```` ```mermaid ```` fences rendered on the host with the pinned
-  Mermaid CLI and a plugin-managed Chrome headless shell.
-- Both in one message, mixed with ordinary Markdown (headings, emphasis,
-  lists, quotes, tables, code, HTTP(S) links, and local source-file links).
-- Chinese bold text and boxed equation borders are preserved.
-- Copy TeX and original source, formula/diagram inspection, light and dark themes,
-  and per-host size/module settings.
+[Install](#install) · [Plugin catalog](https://paseo.cafe/plugins/advanced-markdown) ·
+[npm](https://www.npmjs.com/package/paseo-advanced-markdown) ·
+[Release notes](https://github.com/custyhs/paseo-advanced-markdown/releases)
 
-**v0.2.6** extends compatibility to Paseo 0.11.x (`>=0.8.0 <0.12.0`).
-Validated against the official 0.11.0-beta.3 compiler, SDK, daemon, and web client;
-the stable 0.11.0 package was not yet published at validation time. See the
-[release notes](docs/release/0.2.6.md).
+- **Read math and diagrams** alongside text, tables, code, and local file links.
+- **Click to inspect** a formula or diagram, zoom in, view its source, and copy it.
+- **Keep rendering local** on your Paseo daemon host, with light and dark themes.
 
-v0.2.5 fixes formulas falling back to raw LaTeX when a local
-file link appears in the same message. Local links open a read-only source
-preview with line numbers. See the [release notes](docs/release/0.2.5.md).
+![Math formulas mixed with Markdown in a Paseo conversation](images/01-math-overview.jpg)
 
-v0.2.4 extends the supported Paseo range to `>=0.8.0 <0.11.0` and adds
-Paseo 0.10.1 to the compiler/SDK compatibility checks. See the
-[release notes](docs/release/0.2.4.md).
+<details>
+<summary>More screenshots: formula viewer and Mermaid diagrams</summary>
 
-v0.2.3 repairs missing or damaged formula assets automatically at startup,
-including local directory reloads and npm installations. Recovery works offline
-before MathJax loads its font tables. See the [release notes](docs/release/0.2.3.md).
+![Formula viewer with source, copy, and zoom controls](images/02-formula-viewer.jpg)
 
-v0.2.2 adds a screenshot gallery for the plugin catalog and includes those
-images in the npm package. See the [release notes](docs/release/0.2.2.md).
+![Mermaid diagram in a Paseo conversation](images/03-mermaid-diagram.jpg)
 
-v0.2.1 prepared npm distribution with prebuilt rendering code, verified offline
-assets, and a complete package source-size check. See the
-[package validation](docs/qa/npm-package.md).
+Screenshots use sample conversations in the official Paseo 0.9.0-beta.2 web client.
 
-v0.2.0 added a shared formula/diagram viewer, mouse dragging for overflowing
-formulas and code, and fixes for footnote rendering and native inline formula
-layout. See the [release notes](docs/release/0.2.0.md) and
-[validation record](docs/qa/click-viewer.md). The latest iPhone layout adjustment
-still needs device confirmation; Android UI validation remains pending.
-
-## Screenshots
-
-Captured in the official Paseo 0.9.0-beta.2 web client, using sample conversations.
-
-Inline and display math mixed with ordinary Markdown:
-
-![Inline and display equations in an explanation of attention](images/01-math-overview.jpg)
-
-Click a formula to preview it, adjust its zoom, inspect the source, or copy LaTeX:
-
-![Formula viewer with Preview, Source, Copy LaTeX, and zoom controls](images/02-formula-viewer.jpg)
-
-Mermaid diagrams rendered alongside prose and tables:
-
-![Mermaid release pipeline rendered inside a Paseo conversation](images/03-mermaid-diagram.jpg)
-
-## Requirements
-
-| Side | Requirement |
-| --- | --- |
-| Paseo | app and daemon **>=0.8.0 <0.12.0**; compiler/SDK checks cover 0.8.0, 0.9.0-beta.2, 0.10.1, and 0.11.0-beta.3 (see the [release notes](docs/release/0.2.6.md)) |
-| Daemon host | Node ≥ 22.22 and npm on `PATH` for the preparation step, Git, about 700 MiB of disk in the plugin cache, network access during installation only |
-| Text font | A font covering any non-Latin characters used inside formulas (Chinese, Japanese, Korean, …). macOS and most desktop Linux installs already have one; see [Text inside formulas](#text-inside-formulas) |
-| Daemon host OS | verified on macOS arm64; Linux needs a CJK font (`fonts-noto-cjk`), `ps` (`procps`), the usual Chrome shared libraries, and either unprivileged user namespaces or `PASEO_ADVANCED_MARKDOWN_NO_SANDBOX=1` in the daemon's environment (Ubuntu 24.04 restricts them by default); Windows is untested |
-| Clients | official browser web UI verified in detail; prior rendering flow verified by the maintainer on official iOS/Paseo 0.8.0 (2026-09-14) and another Mac; v0.2.0's latest iPhone layout and Android UI remain unverified (see `docs/qa/`) |
-
-Plugins must be enabled on the daemon (Settings → Plugins, or `pluginsEnabled`
-in `config.json`).
-
-Paseo also checks prereleases against their stable core, so `0.11.0-beta.3`
-meets this range, while `0.12.0-beta.1` does not. This is a bounded compatibility
-policy, not a claim that every 0.8/0.9/0.10/0.11 build has received device QA.
-Versions before v0.2.6 do not accept Paseo 0.11; versions before v0.2.4 exclude 0.10; tags through v0.1.4 require
-exactly Paseo 0.8.0. Install v0.2.6 for the current release.
+</details>
 
 ## Install
 
-From Git, pinned to a tag (recommended):
+Requires **Paseo 0.8–0.11** on both app and daemon (`>=0.8.0 <0.12.0`).
+The daemon host needs Node ≥ 22.22, npm, Git, internet access for installation,
+and about 700 MiB for the rendering cache.
+
+Enable plugins in **Settings → Plugins**, then run:
 
 ```bash
 paseo plugin add custyhs/paseo-advanced-markdown --ref v0.2.6
 paseo plugin ls
 ```
 
-Paseo runs the manifest's preparation commands on the daemon host:
-`npm ci`, `npm run build`, and `npm run prepare-browser`. The last one prepares
-the formula assets and installs the pinned Mermaid CLI runtime and Chrome headless shell into
-`~/.cache/paseo-advanced-markdown` (or `$XDG_CACHE_HOME/paseo-advanced-markdown`,
-`%LOCALAPPDATA%\paseo-advanced-markdown` on Windows; override with
-`PASEO_ADVANCED_MARKDOWN_CACHE`, which must be an absolute path). Relative
-`XDG_CACHE_HOME` and `LOCALAPPDATA` values are ignored. That directory is outside Paseo's managed
-checkouts, so plugin updates reuse it and a removed plugin can be cleaned up by
-deleting it.
-
-From a local checkout:
-
-```bash
-git clone https://github.com/custyhs/paseo-advanced-markdown.git
-cd paseo-advanced-markdown
-npm ci && npm run build && npm run prepare-browser
-paseo plugin install "$PWD"
-```
-
-Put `--host <host:port>` before `plugin` to target a daemon other than the
-CLI's default one. `paseo plugin add` and `plugin install` mean you trust this
-codebase: its server side runs unsandboxed on the daemon host.
-
-## Update and roll back
-
-```bash
-paseo plugin update advanced-markdown        # tracks the ref you installed
-```
-
-A fixed tag does not advance to the next release. If `paseo plugin update --help`
-lists `--ref`, switch an existing Git installation without removing its settings:
+Paseo prepares the rendering dependencies automatically. For an existing Git
+installation with `--ref` support:
 
 ```bash
 paseo plugin update advanced-markdown --ref v0.2.6
 ```
 
-Older CLIs require removing and adding the plugin with the new tag; record your
-plugin settings before removal, because removal deletes them. Use `v0.2.5` to
-roll back on Paseo 0.8/0.9/0.10; it cannot load on Paseo 0.11. There is no earlier
-plugin release supporting 0.11. Older versions have narrower host requirements: v0.2.3 excludes
-Paseo 0.10, and tags through v0.1.4 require exactly Paseo 0.8.0.
+A pinned tag stays on that release until you select a newer tag.
+See the [installation guide](https://github.com/custyhs/paseo-advanced-markdown/blob/main/docs/installation.md)
+for Linux setup, local checkouts, rollback, and troubleshooting.
 
-A failed preparation during `plugin update` keeps the installed version running. Updates never touch
-chat history, Drafts, or other plugins.
+## Use
 
-## What is rendered, and what is not
+Formulas in `$…$`, `\(…\)`, `$$…$$`, `\[…\]`, or `math` fences render automatically;
+`mermaid` fences render as diagrams.
 
-| Content | Behavior |
-| --- | --- |
-| Complete inline or display math, closed `math` fence | image; click or tap to inspect and copy |
-| A `math` fence whose body is itself wrapped in `\[…\]`, `$$…$$`, `\(…\)`, or `$…$` | the redundant wrapper is ignored, the formula renders |
-| Complete `mermaid` fence: flowchart, sequence, class, state, ER, Gantt (verified); other types on a best-effort basis | image; click or tap to inspect and copy |
-| Unclosed delimiters or fences while streaming | readable source until closed |
-| Prices (`$5 and $10`), `\$`, inline code, other fences | plain text / code |
-| Footnote markers and definitions (`[^note]`, `[^note]: …`) | readable text; formulas in definition lines render, without footnote navigation |
-| Invalid TeX, invalid Mermaid, oversized input | source with a short reason; other content still renders |
-| Local source-file links beside formulas or diagrams | clickable read-only source preview on the selected host; supports relative paths, absolute paths, `file://` URLs, `:line` and `#Lline` anchors |
-| Messages with inline images or unsupported link schemes | left to Paseo's renderer |
-| User messages, tool output, other timeline rows | unchanged |
+Click or tap a formula or diagram to open its viewer. Use **Preview** to zoom and
+copy LaTeX or Mermaid; use **Source** to copy Markdown. On desktop, drag long
+formulas and overflowing code blocks horizontally. Local file links open a
+read-only preview.
 
-Bare `$$` display math that contains a blank line is split by Paseo while
-streaming; each half stays readable source. Use a ```` ```math ```` fence for
-multi-paragraph display math.
+Change text size, formula size, and enabled modules in
+**Settings → Plugins → Advanced Markdown**.
 
-Local file links open a plugin preview because Paseo's public timeline SDK does
-not expose file-tab navigation. Files are read only after a click, relative to
-the conversation's working directory on its host. The preview shows up to 200
-lines / 32 KiB around the requested line and can copy the path or displayed source.
-Only UTF-8 regular files up to 1 MiB are supported; missing, binary, or larger
-files show an error. HTTP(S) and mail links keep their usual behavior.
+## Compatibility and details
 
-Copy scopes: copying happens inside the viewer. In **Preview**, **Copy LaTeX** or
-**Copy Mermaid** copies the original expression or diagram body. In **Source**,
-**Copy Markdown** copies the exact block, including its delimiters or fence.
-**More** offers the other copy format and **Copy fragment Markdown**,
-which copies the timeline row's text. Paseo may split one long reply into several
-rows while it streams; this last action copies only the row containing the entry.
+The latest release was tested with official **Paseo 0.11.0-beta.3**, including
+web layouts at desktop and phone widths. This release has no new iOS/Android
+device validation; Windows is untested.
 
-## Reading code blocks
+- [Usage and limits](https://github.com/custyhs/paseo-advanced-markdown/blob/main/docs/usage.md) — supported content, viewer behavior, and rendering limits.
+- [Development and packaging](https://github.com/custyhs/paseo-advanced-markdown/blob/main/docs/development.md) — local setup, compatibility checks, and release tooling.
+- [Report an issue](https://github.com/custyhs/paseo-advanced-markdown/issues) — include your Paseo version, platform, and a sample that reproduces the problem.
 
-In messages rendered by this plugin, overflowing code blocks support mouse dragging
-on desktop. **Select text** switches to text selection; **Drag to scroll** switches
-back. **Copy source** copies the entire original block body in either mode. Short
-code blocks and native clients keep their usual text selection and scrolling.
-
-## Reading formulas
-
-Formula size offers 75%, 100%, 125%, 150%, and 200%, relative to the text size.
-This preference is shared by clients of the selected host and affects only math.
-Reset formula size restores 100% without changing prose, Mermaid, or module switches.
-
-Each paragraph/list/table cell measures its own width. A formula can shrink by
-up to 15% to fit; longer formulas keep their reading size and scroll horizontally.
-An oversized inline formula moves into a scrollable block at the same source
-position. Short formulas do not stretch to fill the available width.
-On native clients, ordinary fractions, sums, and scripts stay inline, with line
-height reserved from their image metrics across the text run. Formulas requiring
-more than two normal lines move into a separate block, with adjacent closing
-punctuation kept beside the image. The latest native layout still needs iPhone
-and Android device validation.
-On desktop, drag an overflowing formula left or right to pan; releasing a drag
-does not open the viewer. Trackpad and touch scrolling remain available.
-
-Click or tap a formula, diagram, or its source placeholder to open the shared
-viewer. Keyboard users can activate the same entries. The conversation shows no
-hover toolbar or tap-to-reveal action row. Source remains selectable, and dragging
-or selecting text does not open the viewer.
-
-The viewer has **Preview** and **Source** modes. **Fit** shows the complete image
-inside the available width and height; **−** and **+** adjust temporary zoom, with
-scrolling for larger images. The percentage is relative to the saved reading size
-and does not change the Formula size setting. Diagrams start fitted within the
-viewer without enlargement. Use the modal's close control to return to reading.
-Overflowing previews also support mouse dragging. Source mode retains text selection.
-
-Loading, failed, and disabled-module entries open on readable source. **Preview**
-becomes available when an image is ready. Recoverable failures expose **Retry**
-inside the viewer. Copy actions stay available in either mode; **Copy LaTeX**
-preserves the original expression body, excluding a redundant outer wrapper.
-
-Sharper PNGs are requested by display density and scale, up to 8×. Available
-images stay visible while more detail loads. Image/payload limits can cap detail;
-zoom cannot provide unlimited resolution. Images have source accessibility labels,
-not semantic MathML navigation or selectable mathematical glyphs.
-
-The reviewed TeX profile adds `mathtools` and `cancel`, including `\mathclap`,
-`\coloneqq`, `\cancel`, and `\cancelto`. Undefined macros fail locally; custom
-macro definitions do not carry across formulas. Markdown link labels keep their
-existing literal behavior. See the [host limitations](docs/qa/math-reading-gaps.md).
-
-## Text inside formulas
-
-MathJax's math fonts cover Latin, Greek, and mathematical symbols. Anything else,
-including Chinese, Japanese, and Korean in `\text{…}`, needs a text font on the
-daemon host. The plugin reads a font collection, plus a matching bold companion when needed, and hands them to the rasterizer; it
-looks for these, in order, and the first parseable font covering all required fallback characters wins:
-
-| Platform | Looked for |
-| --- | --- |
-| macOS | PingFang, Hiragino Sans GB, STHeiti Light, Songti, Arial Unicode |
-| Linux | Noto Sans/Serif CJK, WenQuanYi Zen Hei, AR PL UMing |
-| Windows | Microsoft YaHei, SimSun, Microsoft JhengHei, Arial Unicode MS |
-
-Set `PASEO_ADVANCED_MARKDOWN_FONT` in the daemon's environment to use a specific
-font file instead. On a minimal Linux host, install one first, for example
-`apt-get install fonts-noto-cjk`. When no usable font is found the formula keeps
-its source and says so; installing a font takes effect on the next render, with
-no plugin reload. For font and renderer failures, open the source placeholder and
-use **Retry** in the viewer. A damaged font or missing glyph returns source with
-an error instead of a successful blank image. If bold text is requested,
-the font must include a matching bold face; common sibling filenames such as
-`NotoSansCJK-Bold.ttc` are discovered automatically.
-
-## Settings
-
-Settings → Plugins → Advanced Markdown, per host:
-
-- Math formulas on/off, Mermaid diagrams on/off. A disabled module shows its
-  source. A message whose enabled content is exhausted returns to Paseo's own
-  renderer the next time it is displayed; rows already on screen update after a
-  reload or when the conversation is reopened.
-- Text size inside plugin rows.
-- Formula size and its independent reset.
-- Runtime status: engine versions, browser, cache directory, queue and cache
-  counts.
-
-These switches do not change Paseo's built-in Mermaid rendering for rows the
-plugin does not own.
-
-## Limitations
-
-| Limit | Value |
-| --- | --- |
-| Formula | 4096 characters |
-| Mermaid definition | 32 KiB |
-| Image | 2,000,000 base64 characters; 8 M raster pixels and 4096 px longest edge (large diagrams are re-rendered at a lower scale, down to 0.5x) |
-| Math raster | Density 1/2/3/4/6/8; logical size independent of density; lower detail is used when an image budget is reached |
-| Math queue | 1 rendering, up to 128 waiting inputs; duplicate requests share work |
-| Mermaid queue | 1 running, 8 waiting per plugin process; 15 s per task |
-| Caches | 128 images / 8 MiB on the host and in each client |
-
-Rendering happens on the selected daemon host only. Message content never
-leaves it; the render browser runs with networking disabled.
-
-## Other timeline plugins
-
-Paseo gives an assistant row to the first plugin whose transformer claims it.
-Do not enable this plugin together with another plugin that replaces assistant
-rows containing math or Mermaid (for example a separate math plugin); disable
-one of them.
-
-## Development
-
-```bash
-npm ci
-npm run build            # Markdown/MathJax bundles, formula assets, runtime manifest
-npm run prepare-browser  # formula assets, Mermaid runtime and browser into the cache
-npm run typecheck && npm run lint && npm run format:check
-npm test                 # parser, renderer, cache, Mermaid, fault injection
-npm run paseo-source     # official Paseo 0.8.0 app sources for the smoke
-npm run smoke            # 0.8 compiler + official projection + RPCs
-HERMES_BIN=… npm run smoke:hermes
-```
-
-To check a newer compiler/SDK without changing the 0.8 development lockfile:
-
-```bash
-npm install --prefix .compat-runtime --no-save --package-lock=false @getpaseo/server@0.11.0-beta.3 @getpaseo/plugin@0.11.0-beta.3
-PASEO_COMPAT_RUNTIME=.compat-runtime npm run smoke
-```
-
-The app projection/stream fixtures remain pinned to 0.8.0. The selected compiler,
-manifest validator, SDK registrations and RPC handlers use the selected runtime;
-this smoke does not replace a real client/device check for the selected version.
-
-### Prepare an npm package
-
-```bash
-npm run pack
-npm run smoke:package
-PASEO_COMPAT_RUNTIME=.compat-runtime npm run smoke:package
-```
-
-`npm run pack` builds the generated modules and writes
-`.smoke/npm/paseo-advanced-markdown-<version>.tgz`, plus a file inventory and integrity
-hash in `.smoke/npm/pack.json`. It does not publish anything. The generated package
-contains the runtime sources, original resvg WASM, precompiled MathJax renderer,
-static MathJax SVG font data, preparation scripts,
-worker lockfile, and a production `npm-shrinkwrap.json`. Host libraries and build
-tools are excluded from its dependencies. The precompiled renderer uses the same
-MathJax 3.2.2 profile as the Git source and includes its license. Unused MathJax
-speech/XML dependencies are not installed; dependency overrides in a published
-package do not reliably control the consuming application's dependency graph.
-
-The repository stays private in npm metadata because its manifest prepares a Git
-checkout with `npm ci` and a source build. The generated npm package is public-ready
-and its manifest prepares the formula assets, Mermaid worker and browser. Publish the
-generated `.tgz`, not the repository directory; do not use bare `npm pack` here.
-Keep the package and GitHub source versions aligned before publication.
-
-The WASM and font JSON are data files. Preparation checks their SHA256 and size
-and copies them to content-addressed paths under the cache's `assets/` directory.
-The build also produces compressed recovery data, imported into the server bundle
-because Paseo evaluates that bundle in memory without a reliable package path.
-Before loading the renderer, startup verifies both assets and restores missing or
-damaged copies offline. The first render can also recover a binary removed after
-startup. Valid cache files are reused; old versions are retained for running
-processes and rollback. Recovery never installs dependencies or downloads a browser.
-
-Local directory reloads do not run manifest build commands. After changing source,
-run `npm run build` before reloading; formula assets then repair themselves even
-with an empty cache. Mermaid still needs `npm run prepare-browser` when its worker
-or browser is absent. `npm run prepare-assets` remains available for explicit formula
-asset preparation, using the same cache environment as the daemon. If automatic
-recovery fails, the error identifies the asset and cache path; check write permissions
-or reinstall/rebuild the plugin if its bundled recovery data is damaged.
-
-Packaging counts every JS/TS source file shipped under `client/`, `server/`,
-`shared/`, and `scripts/`, plus the root entries, including generated modules and
-declarations. It fails above 2,000,000 bytes in total or per file, or 200 files.
-The count is saved in `.smoke/npm/source-budget.json` and does not depend on the
-community scanner's import traversal.
-
-`smoke:package` installs the tarball outside the checkout with lifecycle scripts
-disabled and production dependencies only. It runs the package's preparation,
-moves the installation to simulate activation, compiles both entries with the
-selected official Paseo compiler, and renders real formula and Mermaid PNGs
-through the compiled RPC handlers. It also clears or corrupts the formula cache
-and removes the original data files after compilation to verify offline startup
-recovery from the in-memory bundle. Its browser cache and
-reports stay under `.smoke/npm/`; it does not reload the production plugin or daemon.
-
-QA notes and evidence: `docs/qa/`. Licensing: Apache-2.0, see `LICENSE` and
-`NOTICE` (parts adapted from q5m-ai/paseo-math).
+Licensed under [Apache-2.0](LICENSE). See [NOTICE](NOTICE) for attribution.
