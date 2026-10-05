@@ -80,6 +80,8 @@ plugin does not own.
 Code blocks and tables are off by default so an update does not change which rows
 the plugin owns; turn them on to fix wrapped folder trees and squeezed tables on
 narrow screens. Copying a code block still copies its source, without the fence.
+Tables render with **Copy table** (GFM) and **Copy as TSV** actions so the data
+pastes into a chat or a spreadsheet.
 
 ## What is rendered, and what is not
 
