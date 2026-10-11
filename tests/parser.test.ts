@@ -13,6 +13,12 @@ import {
   shouldTakeOver,
 } from "../shared/markdown/extensions.js";
 import type { ExtensionMeta } from "../shared/markdown/extensions.js";
+import {
+  MAX_CODE_SOURCE,
+  MAX_MATH_EXPRESSION,
+  MAX_MERMAID_SOURCE,
+  MAX_TABLE_CELLS,
+} from "../shared/limits.js";
 import { compactEquationTags, normalizeTex } from "../shared/tex.js";
 
 const meta = (token: Token): ExtensionMeta => token.meta as unknown as ExtensionMeta;
@@ -481,6 +487,98 @@ describe("mixed content", () => {
     const both = detectExtensions(mixed);
     expect(shouldTakeOver(both, MERMAID_ONLY)).toBe(true);
     expect(shouldTakeOver(both, NO_MODULES)).toBe(false);
+  });
+});
+
+describe("whole-message code and table budgets", () => {
+  const fence = (body: string, language = "text") => `\`\`\`${language}\n${body}\n\`\`\``;
+  const table = (cells: number) =>
+    ["| Header |", "| --- |", ...Array.from({ length: cells - 1 }, () => "| value |")].join("\n");
+
+  it("accepts code at the source budget and rejects the next character", () => {
+    for (const wrap of [fence, (body: string) => `    ${body}\n`]) {
+      const atLimit = wrap("x".repeat(MAX_CODE_SOURCE - 1));
+      expect(
+        parse(atLimit).find((token) => token.type === "fence" || token.type === "code_block")
+          ?.content,
+      ).toHaveLength(MAX_CODE_SOURCE);
+      expect(shouldTakeOver(detectExtensions(atLimit), ALL_MODULES)).toBe(true);
+      const overLimit = wrap("x".repeat(MAX_CODE_SOURCE));
+      expect(shouldTakeOver(detectExtensions(overLimit), ALL_MODULES)).toBe(false);
+      expect(shouldTakeOver(detectExtensions(`${overLimit}\n\n$x$`), MATH_ONLY)).toBe(false);
+    }
+  });
+
+  it("measures Unicode code with the same source-length budget as ASCII", () => {
+    const body = `${"😀".repeat((MAX_CODE_SOURCE - 2) / 2)}中`;
+    expect(body.length + 1).toBe(MAX_CODE_SOURCE);
+    expect(shouldTakeOver(detectExtensions(fence(body)), ALL_MODULES)).toBe(true);
+    expect(shouldTakeOver(detectExtensions(`${fence(`${body}x`)}\n\n$x$`), MATH_ONLY)).toBe(false);
+  });
+
+  it("rejects an oversized code block even beside an eligible block or diagram", () => {
+    const oversized = fence("x".repeat(MAX_CODE_SOURCE));
+    const eligible = fence("const value = 1;");
+    const diagram = fence("flowchart LR\n  A --> B", "mermaid");
+    for (const source of [
+      `${eligible}\n\n${oversized}`,
+      `${oversized}\n\n${eligible}`,
+      `${oversized}\n\n${diagram}`,
+    ]) {
+      const detected = detectExtensions(source);
+      expect(detected.unsupported).toBe(true);
+      expect(shouldTakeOver(detected, ALL_MODULES)).toBe(false);
+      expect(shouldTakeOver(detected, MERMAID_ONLY)).toBe(false);
+    }
+  });
+
+  it("counts table headers in each table's independent cell budget", () => {
+    expect(shouldTakeOver(detectExtensions(table(MAX_TABLE_CELLS)), ALL_MODULES)).toBe(true);
+    expect(shouldTakeOver(detectExtensions(table(MAX_TABLE_CELLS + 1)), ALL_MODULES)).toBe(false);
+    const smallTable = table(Math.floor(MAX_TABLE_CELLS / 2) + 1);
+    const multiple = `${smallTable}\n\nSeparate table:\n\n${smallTable}`;
+    expect(parse(multiple).filter((token) => token.type === "table_open")).toHaveLength(2);
+    expect(shouldTakeOver(detectExtensions(multiple), ALL_MODULES)).toBe(true);
+  });
+
+  it("rejects oversized tables beside formulas or smaller tables regardless of switches", () => {
+    const oversized = table(MAX_TABLE_CELLS + 1);
+    for (const source of [
+      `$x$\n\n${oversized}`,
+      `${oversized}\n\n$x$`,
+      `${table(2)}\n\nSeparate table:\n\n${oversized}`,
+      `${oversized}\n\nSeparate table:\n\n${table(2)}`,
+    ]) {
+      const detected = detectExtensions(source);
+      expect(detected.unsupported).toBe(true);
+      expect(shouldTakeOver(detected, ALL_MODULES)).toBe(false);
+      expect(shouldTakeOver(detected, MATH_ONLY)).toBe(false);
+    }
+  });
+
+  it("enforces the same budgets inside Markdown containers", () => {
+    const quoted = table(MAX_TABLE_CELLS + 1)
+      .split("\n")
+      .map((line) => `> ${line}`)
+      .join("\n");
+    const listed = `- ${fence("x".repeat(MAX_CODE_SOURCE)).replaceAll("\n", "\n  ")}`;
+    for (const source of [quoted, listed]) {
+      expect(shouldTakeOver(detectExtensions(`${source}\n\n$x$`), MATH_ONLY)).toBe(false);
+    }
+  });
+
+  it("keeps oversized math and Mermaid fences readable as code within the code budget", () => {
+    for (const [language, limit] of [
+      ["math", MAX_MATH_EXPRESSION],
+      ["mermaid", MAX_MERMAID_SOURCE],
+    ] as const) {
+      const source = fence("x".repeat(limit), language);
+      expect(parse(source).find((token) => token.type === "fence")?.content).toHaveLength(
+        limit + 1,
+      );
+      expect(shouldTakeOver(detectExtensions(source), ALL_MODULES)).toBe(true);
+      expect(shouldTakeOver(detectExtensions(`${source}\n\n$x$`), MATH_ONLY)).toBe(true);
+    }
   });
 });
 

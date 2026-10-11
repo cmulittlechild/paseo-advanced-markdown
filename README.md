@@ -62,7 +62,8 @@ read-only preview.
 
 Turn on **Code blocks** and **Tables** (off by default) to also render ordinary
 fenced code and Markdown tables through the plugin, so long lines scroll instead
-of wrapping and wide tables stay readable on phones.
+of wrapping and wide tables stay readable on phones. **Open table** provides
+Markdown and TSV copying inside the viewer.
 
 Change text size, formula size, and enabled modules in
 **Settings → Plugins → Advanced Markdown**.

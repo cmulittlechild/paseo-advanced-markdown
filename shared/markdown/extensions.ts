@@ -18,6 +18,7 @@ import {
   MAX_TABLE_CELLS,
 } from "../limits.js";
 import { isSupportedLink } from "./links.js";
+import { tableSourcePlugin } from "./table-source.js";
 
 /** Token types the extensions add. Renderers match on these names. */
 export const MATH_INLINE = "math_inline";
@@ -329,6 +330,7 @@ function fenceLanguage(info: string): string {
 }
 
 export function markdownExtensions(md: MarkdownParser): void {
+  md.use(tableSourcePlugin);
   // Pinned Markdown 15 packages expose state classes and named rule registries.
   // Capture the real rules rather than maintaining a competing Markdown scanner.
   const balancePairs = md.inline.ruler2.__rules__.find((rule) => rule.name === "balance_pairs")?.fn;
@@ -441,7 +443,7 @@ export interface DetectedExtensions {
   code: boolean;
   /** At least one GFM table within the size budget. */
   table: boolean;
-  /** Nodes the plugin renderer does not cover (images and unsupported links). */
+  /** Unsupported nodes or blocks exceeding the client renderer's size budgets. */
   unsupported: boolean;
 }
 
@@ -476,21 +478,28 @@ export function detectExtensions(source: string): DetectedExtensions {
   let table = false;
   let unsupported = false;
   let tableCells = 0;
-  const pending: Token[] = [...detector.parse(source, {})];
+  const pending: Token[] = detector.parse(source, {}).reverse();
   while (pending.length) {
     const token = pending.pop()!;
     if (token.type === MATH_INLINE || token.type === MATH_BLOCK) math = true;
     else if (token.type === MERMAID_BLOCK) mermaid = true;
     else if (token.type === "fence" || token.type === "code_block") {
       if (token.content.length <= MAX_CODE_SOURCE) code = true;
-    } else if (token.type === "td_open" || token.type === "th_open") tableCells++;
-    else if (token.type === "image") unsupported = true;
+      else unsupported = true;
+    } else if (token.type === "table_open") tableCells = 0;
+    else if (token.type === "td_open" || token.type === "th_open") tableCells++;
+    else if (token.type === "table_close") {
+      if (tableCells > MAX_TABLE_CELLS) unsupported = true;
+      else if (tableCells > 0) table = true;
+    } else if (token.type === "image") unsupported = true;
     else if (token.type === "link_open" && !isSupportedLink(String(token.attrGet("href") ?? "")))
       unsupported = true;
-    if (token.children) for (const child of token.children) pending.push(child);
+    // Visit in document order so each table has an independent cell budget.
+    if (token.children) {
+      for (let i = token.children.length - 1; i >= 0; i--) pending.push(token.children[i]);
+    }
   }
-  if (tableCells > 0 && tableCells <= MAX_TABLE_CELLS) table = true;
-  if (!math && !mermaid && !code && !table) return NONE;
+  if (!math && !mermaid && !code && !table && !unsupported) return NONE;
   return { math, mermaid, code, table, unsupported };
 }
 
@@ -503,7 +512,7 @@ export function shouldTakeOver(
   detected: DetectedExtensions,
   enabled: { math: boolean; mermaid: boolean; codeBlocks: boolean; tables: boolean },
 ): boolean {
-  // Images and unsupported links are not rendered by this plugin; defer to Paseo.
+  // Ownership is per item, so even disabled modules must respect renderer limits.
   if (detected.unsupported) return false;
   return (
     (detected.math && enabled.math) ||

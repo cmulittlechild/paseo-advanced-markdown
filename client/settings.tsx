@@ -101,7 +101,7 @@ export function SettingsScreen({ theme, host }: PluginSurfaceProps) {
               />
               <SettingsSwitch
                 label="Tables"
-                hint="Markdown tables keep readable column widths and scroll horizontally inside the message instead of squeezing every column. Only tables within the size budget are taken over."
+                hint="Keep readable column widths and open tables in a viewer to copy Markdown or TSV. Off restores the standard table layout, including in messages with math. Oversized tables stay with Paseo."
                 value={settings.values.tables}
                 disabled={settings.saving}
                 onValueChange={(tables) => void update({ tables })}
@@ -140,8 +140,8 @@ export function SettingsScreen({ theme, host }: PluginSurfaceProps) {
         <Text style={muted}>
           These switches apply to this host only. Code blocks and tables are off by default so the
           plugin takes over the same messages as before; turn them on to fix wrapped folder trees
-          and squeezed tables on narrow screens. Each client fits content to its own available
-          space.
+          and squeezed tables on narrow screens. Reopen the conversation after changing which
+          messages the plugin takes over. Each client fits content to its own available space.
         </Text>
       </SettingsSection>
       <SettingsSection title="Runtime on this host">

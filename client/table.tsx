@@ -5,13 +5,13 @@
 // line before wrapping; a table whose columns cannot fit at that width scrolls
 // horizontally inside the message instead of squeezing every column to width/N.
 // Estimates run slightly wide so semibold headers do not break mid-word.
-import { ScrollView, copyText, useToast } from "@getpaseo/plugin/client/react-native";
+import { Icon, ScrollView } from "@getpaseo/plugin/client/react-native";
 import type { PluginTheme } from "@getpaseo/plugin";
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
-import { View, type LayoutChangeEvent, type ViewStyle } from "react-native";
-import { tableToMarkdown, tableToTsv } from "../shared/markdown/table.js";
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { Pressable, Text, View, type LayoutChangeEvent, type ViewStyle } from "react-native";
+import { tableSourceAnchor, tableToMarkdown, tableToTsv } from "../shared/markdown/table.js";
 import type { ASTNode } from "./generated/markdown.js";
-import { ActionBar } from "./action-bar.js";
+import { ContentViewerContext, useContentViewer, type ViewerSelection } from "./viewer-context.js";
 
 const CHARACTER_WIDTH_EM = 0.62;
 const MIN_COLUMN_EM = 4;
@@ -67,6 +67,7 @@ function tableColumns(table: ASTNode, fontSize: number): TableColumn[] {
 
 export function MarkdownTable({
   table,
+  viewerId,
   fontSize,
   frameStyle,
   theme,
@@ -74,6 +75,7 @@ export function MarkdownTable({
   children,
 }: {
   table: ASTNode;
+  viewerId: string;
   fontSize: number;
   frameStyle: ViewStyle;
   theme: PluginTheme;
@@ -81,18 +83,70 @@ export function MarkdownTable({
   children: ReactNode;
 }) {
   const columns = useMemo(() => tableColumns(table, fontSize), [table, fontSize]);
-  const toast = useToast();
-  const copy = useCallback(
-    async (text: string, label: string) => {
-      try {
-        await copyText(text);
-        toast.show(`${label} copied`, { variant: "success" });
-      } catch {
-        toast.error(`Unable to copy ${label}.`);
-      }
-    },
-    [toast],
+  const viewer = useContentViewer();
+  const source = tableToMarkdown(table);
+  const selection = useMemo<ViewerSelection | undefined>(
+    () =>
+      source === undefined
+        ? undefined
+        : {
+            id: viewerId,
+            kind: "table",
+            source,
+            sourceAnchor: tableSourceAnchor(table),
+            body: tableToTsv(table),
+            tablePreview: (
+              // Native sheet portals do not inherit plugin-owned contexts.
+              <ContentViewerContext.Provider value={viewer}>
+                <TableCanvas columns={columns} frameStyle={frameStyle}>
+                  {children}
+                </TableCanvas>
+              </ContentViewerContext.Provider>
+            ),
+          },
+    [source, table, viewerId, columns, frameStyle, children, viewer],
   );
+  useEffect(() => {
+    if (selection) viewer?.update(selection);
+  }, [viewer, selection]);
+  return (
+    <View style={{ alignSelf: "stretch", gap: 4 }}>
+      <TableCanvas columns={columns} frameStyle={frameStyle}>
+        {children}
+      </TableCanvas>
+      {selection && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open table viewer"
+          onPress={() => viewer?.open(selection)}
+          style={({ pressed }) => ({
+            alignSelf: "flex-start",
+            flexDirection: "row",
+            alignItems: "center",
+            gap: 6,
+            minHeight: compact ? 44 : 32,
+            paddingHorizontal: 8,
+            borderRadius: 6,
+            backgroundColor: pressed ? theme.colors.surface2 : "transparent",
+          })}
+        >
+          <Icon name="Expand" size={14} color={theme.colors.foregroundMuted} />
+          <Text style={{ color: theme.colors.foregroundMuted, fontSize: 12 }}>Open table</Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
+function TableCanvas({
+  columns,
+  frameStyle,
+  children,
+}: {
+  columns: readonly TableColumn[];
+  frameStyle: ViewStyle;
+  children: ReactNode;
+}) {
   // Sized explicitly so the content is not laid out from unwrapped text width.
   const contentStyle = useMemo(
     () => ({
@@ -129,24 +183,6 @@ export function MarkdownTable({
           <TableColumnsContext.Provider value={columns}>{children}</TableColumnsContext.Provider>
         </View>
       </ScrollView>
-      <ActionBar
-        theme={theme}
-        compact={compact}
-        actions={[
-          {
-            key: "copy-markdown",
-            icon: "Copy",
-            label: "Copy table",
-            onPress: () => void copy(tableToMarkdown(table), "Table"),
-          },
-          {
-            key: "copy-tsv",
-            icon: "Copy",
-            label: "Copy as TSV",
-            onPress: () => void copy(tableToTsv(table), "Table (TSV)"),
-          },
-        ]}
-      />
     </View>
   );
 }
